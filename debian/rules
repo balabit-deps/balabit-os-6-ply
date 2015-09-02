@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+# -*- mode: makefile; coding: utf-8 -*-
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/python-distutils.mk
+
+# Don't compress .py files
+DEB_COMPRESS_EXCLUDE_ALL := .py
+
+DEB_PYTHON_INSTALL_ARGS_ALL += --single-version-externally-managed \
+	--install-layout=deb
+
+PYVERSIONS := $(shell pyversions -s)
+PY3VERSIONS := $(shell py3versions -s)
+
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+build:
+	set -e; \
+	for pyver in $(PYVERSIONS) $(PY3VERSIONS); do \
+		echo "Testing with $$pyver"; \
+		(cd test && $$pyver testlex.py && $$pyver testyacc.py && ./cleanup.sh;)\
+	done
+endif
+
+binary-install/python-ply::
+	pod2man debian/dh_python-ply > dh_python-ply.1
+	dh_installman -p python-ply dh_python-ply.1
+	rm dh_python-ply.1
+
+binary-install/python3-ply::
+	pod2man debian/dh_python3-ply > dh_python3-ply.1
+	dh_installman -p python3-ply dh_python3-ply.1
+	rm dh_python3-ply.1
+
+binary-post-install/python-ply::
+	echo "python-ply:Provides=$$(PYTHONPATH=. python debian/virtual-packages.py $(cdbs_curpkg))" >> \
+		debian/python-ply.substvars
+
+binary-post-install/python3-ply::
+	echo "python3-ply:Provides=$$(PYTHONPATH=. python debian/virtual-packages.py $(cdbs_curpkg))" >> \
+		debian/python3-ply.substvars
